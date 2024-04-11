@@ -1,48 +1,57 @@
 package org.example;
-
-import org.example.crud.ClientCrudService;
-import org.example.crud.PlanetCrudService;
+import org.example.crud.TicketCrudService;
 import org.example.entity.Client;
 import org.example.entity.Planet;
+import org.example.entity.Ticket;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
+import java.sql.Timestamp;
 
 public class Main {
     public static void main(String[] args) {
 
         SessionFactory sessionFactory = new Configuration().configure().buildSessionFactory();
 
-        try (Session session = sessionFactory.openSession()){
-            Client client = new Client();
-            client.setName("Kyrylo Dobrohot");
+        try (Session session = sessionFactory.openSession()) {
 
-            Planet planet = new Planet();
-            planet.setId("MARS");
-            planet.setName("Mars");
+            TicketCrudService ticketCrudService = new TicketCrudService(session);
 
-            ClientCrudService clientCrudService = new ClientCrudService(session);
-            PlanetCrudService planetCrudService = new PlanetCrudService(session);
 
-            Transaction transaction = session.beginTransaction();
-            clientCrudService.createClient(client);
-            planetCrudService.createPlanet(planet);
-            transaction.commit();
+            Ticket ticketWithNonexistentClient = new Ticket();
+            Planet validPlanet = new Planet("MARS", "Mars");
+            ticketWithNonexistentClient.setClient(null);
+            ticketWithNonexistentClient.setFromPlanet(validPlanet);
+            ticketWithNonexistentClient.setToPlanet(validPlanet);
+            ticketWithNonexistentClient.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+            try {
+                ticketCrudService.createTicket(ticketWithNonexistentClient);
+                System.out.println("A ticket for a non-existent or null customer was successfully saved.");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
 
-            Client retrievedClient = clientCrudService.getClientById(client.getId());
-            Planet retrievedPlanet = planetCrudService.getPlanetById(planet.getId());
 
-            System.out.println("Retrieved Client: " + retrievedClient.getName());
-            System.out.println("Retrieved Planet: " + retrievedPlanet.getName());
-
-            retrievedClient.setName("Anna Shabalina");
-            clientCrudService.updateClient(retrievedClient);
-
-            planetCrudService.deletePlanet(retrievedPlanet);
-        }finally{
+            Ticket ticketWithNonexistentPlanet = new Ticket();
+            Client validClient = new Client("Anna Shabalina");
+            session.save(validClient);
+            ticketWithNonexistentPlanet.setClient(validClient);
+            ticketWithNonexistentPlanet.setFromPlanet(null);
+            ticketWithNonexistentPlanet.setToPlanet(validPlanet);
+            ticketWithNonexistentPlanet.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+            try {
+                ticketCrudService.createTicket(ticketWithNonexistentPlanet);
+                System.out.println("A ticket for a non-existent or null planet was successfully saved.");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+        } finally {
             sessionFactory.close();
         }
-
     }
+
 }
+
+       
+
+           
